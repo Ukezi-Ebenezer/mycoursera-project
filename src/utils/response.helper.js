@@ -7,12 +7,20 @@
  * @param {string} message - Success message
  * @param {object} data - Response payload
  */
-const sendSuccess = (res, statusCode, message, data = {}) => {
-  return res.status(statusCode).json({
+const sendSuccess = (res, statusCode, message, data = {}, extra) => {
+  const payload = {
     status: statusCode,
     message,
     data,
-  });
+  };
+  if (extra !== undefined) {
+    if (typeof extra === 'object' && extra !== null && !extra.pagination && (extra.page !== undefined || extra.totalItems !== undefined)) {
+      payload.pagination = extra;
+    } else if (typeof extra === 'object' && extra !== null) {
+      Object.assign(payload, extra);
+    }
+  }
+  return res.status(statusCode).json(payload);
 };
 
 /**
@@ -29,3 +37,4 @@ const sendError = (res, statusCode, message) => {
 };
 
 module.exports = { sendSuccess, sendError };
+
