@@ -1,5 +1,6 @@
 'use strict';
 
+const mongoose = require('mongoose');
 const Course = require('../models/Course');
 const { toCourseResponse } = require('../utils/course');
 
@@ -101,6 +102,47 @@ const getCourses = async (query, user) => {
   };
 };
 
+/**
+ * Retrieve a single course by its unique ID
+ *
+ * @param {string} id - 24-character hexadecimal MongoDB ObjectId
+ * @param {object} user - Authenticated user from req.user
+ * @returns {Promise<object>} Formatted course object
+ */
+const getCourseById = async (id, user) => {
+  // Validate :id with mongoose.isValidObjectId (and ensure 24-character hex string)
+  if (
+    typeof id !== 'string' ||
+    !/^[0-9a-fA-F]{24}$/.test(id) ||
+    !mongoose.isValidObjectId(id)
+  ) {
+    const error = new Error('Invalid course id');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Find course with findById and .lean()
+  const course = await Course.findById(id).lean();
+
+  if (!course) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Visibility: if req.user.accountType is "User" and the course has availability false,
+  // return the exact same 404 "Course not found" response.
+  const userRole = user?.accountType || user?.role;
+  if (userRole === 'User' && course.availability === false) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return toCourseResponse(course);
+};
+
 module.exports = {
   getCourses,
+  getCourseById,
 };

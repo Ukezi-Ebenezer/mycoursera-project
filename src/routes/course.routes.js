@@ -5,7 +5,7 @@ const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/authorize.middleware');
 const { validateQuery } = require('../middlewares/validate.middleware');
 const { getCoursesQuerySchema } = require('../validators/course.validator');
-const { getAllCourses } = require('../controllers/course.controller');
+const { getAllCourses, getCourse } = require('../controllers/course.controller');
 const { ROLES } = require('../constants/roles');
 const { sendSuccess } = require('../utils/response');
 
@@ -179,6 +179,120 @@ const router = Router();
  *                   example: "Authentication required"
  */
 router.get('/', authenticate, validateQuery(getCoursesQuerySchema), getAllCourses);
+
+/**
+ * @openapi
+ * /api/courses/{id}:
+ *   get:
+ *     summary: Retrieve a single course by ID
+ *     description: Retrieve a single course by its 24-character hexadecimal ID. Any logged-in user can access this endpoint. Standard Users receive a 404 response if the course availability is false to prevent enumeration. Instructors and Admins can view any course regardless of availability.
+ *     tags:
+ *       - Courses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 24-character hexadecimal MongoDB ObjectId
+ *         example: "6aec5b0c848268f02461857c"
+ *     responses:
+ *       200:
+ *         description: Course retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "Course retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "6aec5b0c848268f02461857c"
+ *                     title:
+ *                       type: string
+ *                       example: "Course title"
+ *                     price:
+ *                       type: number
+ *                       example: 90
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["Product", "Figma"]
+ *                     description:
+ *                       type: string
+ *                       example: "This is your course's description"
+ *                     level:
+ *                       type: string
+ *                       example: "Beginners"
+ *                     category:
+ *                       type: string
+ *                       example: "Design"
+ *                     availability:
+ *                       type: boolean
+ *                       example: true
+ *                     instructor:
+ *                       type: string
+ *                       example: "6aec5b0c848268f02461857c"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-11-05T10:31:40.203Z"
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-11-05T10:31:40.203Z"
+ *       400:
+ *         description: Bad Request (Invalid course id)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 400
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid course id"
+ *       401:
+ *         description: Unauthorized (Missing or invalid token)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 401
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       404:
+ *         description: Not Found (Course not found or unavailable to standard users)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 404
+ *                 message:
+ *                   type: string
+ *                   example: "Course not found"
+ */
+router.get('/:id', authenticate, getCourse);
 
 /**
  * @openapi
