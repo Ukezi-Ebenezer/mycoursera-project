@@ -3,6 +3,7 @@
 const { Router } = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/authorize.middleware');
+const { courseWriteLimiter } = require('../middlewares/rateLimit.middleware');
 const { validate, validateQuery, validateParams } = require('../middlewares/validate.middleware');
 const { getCoursesQuerySchema, courseIdParamSchema, updateCourseSchema } = require('../validators/course.validator');
 const { getAllCourses, getCourse, updateCourse } = require('../controllers/course.controller');
@@ -453,6 +454,7 @@ router.get('/:id', authenticate, validateParams(courseIdParamSchema), getCourse)
 router.put(
   '/:id',
   authenticate,
+  courseWriteLimiter,
   authorize(ROLES.INSTRUCTOR, ROLES.ADMIN),
   validateParams(courseIdParamSchema),
   validate(updateCourseSchema),
@@ -523,7 +525,7 @@ router.put(
  *                   type: string
  *                   example: "Access denied: insufficient permissions"
  */
-router.post('/', authenticate, authorize(ROLES.INSTRUCTOR, ROLES.ADMIN), (req, res) => {
+router.post('/', authenticate, courseWriteLimiter, authorize(ROLES.INSTRUCTOR, ROLES.ADMIN), (req, res) => {
   return sendSuccess(res, 201, 'Course created successfully', {
     course: req.body || {},
     createdBy: {

@@ -8,6 +8,8 @@ const BlacklistedToken = require('../models/BlacklistedToken');
 const { generateToken, hashToken } = require('../utils/token');
 const { sendOtpEmail } = require('../utils/mailer');
 
+const DUMMY_HASH = '$2b$10$TqJ3YN6CN2gUC./IHqkeTuzAUcq.oZaIcDCeyAMWjt6jFYhkUkJxi';
+
 /**
  * Register a new user
  * @param {object} data - Validated registration payload
@@ -100,6 +102,8 @@ const loginUser = async ({ email, password }) => {
   // Find user and explicitly select password
   const user = await User.findOne({ email: normalizedEmail }).select('+password');
   if (!user) {
+    // Perform dummy comparison to prevent response time user enumeration
+    await bcrypt.compare(password, DUMMY_HASH);
     const error = new Error('Invalid email or password');
     error.statusCode = 401;
     throw error;

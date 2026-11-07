@@ -10,7 +10,11 @@ const {
   logout,
 } = require('../controllers/auth.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
-const { registerLimiter } = require('../middlewares/rateLimit.middleware');
+const {
+  registerLimiter,
+  loginLimiter,
+  passwordLimiter,
+} = require('../middlewares/rateLimit.middleware');
 
 const router = Router();
 
@@ -241,7 +245,9 @@ router.post('/register', registerLimiter, (req, res, next) => register(req, res,
  *                   type: string
  *                   example: Invalid email or password
  */
-router.post('/login', (req, res, next) => login(req, res, next));
+router.post('/login', loginLimiter, (req, res, next) => login(req, res, next));
+
+router.use('/password', passwordLimiter);
 
 /**
  * @openapi

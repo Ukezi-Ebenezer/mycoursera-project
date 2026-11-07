@@ -5,6 +5,8 @@ const Course = require('../models/Course');
 const { toCourseResponse } = require('../utils/course');
 const { canManageCourse } = require('../utils/ownership');
 const { ROLES } = require('../constants/roles');
+const { pick } = require('../utils/pick');
+const logger = require('../utils/logger');
 
 /**
  * Escape regular expression special characters
@@ -179,6 +181,19 @@ const updateCourse = async (id, updateData, user) => {
     throw error;
   }
 
+  // Pick only strictly allowed fields for course update
+  const allowedCourseKeys = [
+    'title',
+    'description',
+    'price',
+    'tags',
+    'level',
+    'category',
+    'duration',
+    'availability',
+  ];
+  const safeUpdateData = pick(updateData, allowedCourseKeys);
+
   // Build filter: include _id, and instructor: req.user._id for Instructor
   const filter = { _id: id };
   const userRole = user?.accountType || user?.role;
@@ -190,7 +205,7 @@ const updateCourse = async (id, updateData, user) => {
   // Update with findOneAndUpdate
   const updatedCourse = await Course.findOneAndUpdate(
     filter,
-    { $set: updateData },
+    { $set: safeUpdateData },
     { new: true, runValidators: true }
   );
 
@@ -199,6 +214,13 @@ const updateCourse = async (id, updateData, user) => {
     error.statusCode = 403;
     throw error;
   }
+
+  // Audit log the update safely
+  logger.logCourseUpdate({
+    userId: user?._id || user?.id,
+    courseId: updatedCourse._id,
+    changedFields: Object.keys(safeUpdateData),
+  });
 
   return toCourseResponse(updatedCourse);
 };

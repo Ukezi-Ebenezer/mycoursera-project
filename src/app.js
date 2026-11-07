@@ -13,9 +13,42 @@ const setupSwagger = require('./config/swagger');
 const app = express();
 
 // ── Security & utility middleware ─────────────────────────────────────────────
+app.disable('x-powered-by');
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors());
-app.use(morgan('dev'));
+
+// CORS configuration
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : null;
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow non-browser requests with no origin
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (corsOrigins && corsOrigins.length > 0) {
+      if (corsOrigins.includes(origin) || corsOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    }
+    // If CORS_ORIGIN is not set, only allow when NODE_ENV is development
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// Safe request logging (never logs Authorization, passwords, tokens, or OTPs)
+app.use(
+  morgan('dev', {
+    skip: () => process.env.NODE_ENV === 'test',
+  })
+);
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 

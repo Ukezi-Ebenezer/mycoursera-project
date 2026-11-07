@@ -31,6 +31,12 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
     return sendError(res, 400, 'Validation error');
   }
 
+  // Handle Mongo duplicate key error (code 11000) cleanly
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern || err.keyValue || {})[0] || 'Field';
+    return sendError(res, 409, `${field.charAt(0).toUpperCase() + field.slice(1)} already in use`);
+  }
+
   const statusCode = err.status || err.statusCode || 500;
 
   // Never return stack traces, internal paths, or exception text for 500 errors

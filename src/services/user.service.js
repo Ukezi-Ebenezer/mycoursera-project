@@ -1,6 +1,7 @@
 'use strict';
 
 const User = require('../models/User');
+const { pick } = require('../utils/pick');
 const { toProfileResponse, toUpdateResponse, splitName } = require('../utils/profile');
 
 /**
@@ -27,12 +28,25 @@ const getCurrentProfile = async (userId) => {
  * @returns {object} Formatted flat update response
  */
 const updateUserProfile = async (userId, updateData, currentUserName) => {
+  const allowedKeys = [
+    'first_name',
+    'last_name',
+    'email',
+    'phone_number',
+    'country',
+    'state',
+    'countryCode',
+    'occupation',
+    'address',
+    'dateOfBirth',
+  ];
+  const safeData = pick(updateData, allowedKeys);
   const updateFields = {};
 
   // Check email uniqueness if email is being updated
-  if (updateData.email) {
+  if (safeData.email) {
     const existingUser = await User.findOne({
-      email: updateData.email,
+      email: safeData.email,
       _id: { $ne: userId },
     });
     if (existingUser) {
@@ -40,47 +54,47 @@ const updateUserProfile = async (userId, updateData, currentUserName) => {
       error.statusCode = 409;
       throw error;
     }
-    updateFields.email = updateData.email;
+    updateFields.email = safeData.email;
   }
 
   // Name handling: first_name / last_name
-  if (updateData.first_name !== undefined || updateData.last_name !== undefined) {
+  if (safeData.first_name !== undefined || safeData.last_name !== undefined) {
     const { first_name: currentFirst, last_name: currentLast } = splitName(currentUserName || '');
-    const newFirst = updateData.first_name !== undefined ? updateData.first_name : currentFirst;
-    const newLast = updateData.last_name !== undefined ? updateData.last_name : currentLast;
+    const newFirst = safeData.first_name !== undefined ? safeData.first_name : currentFirst;
+    const newLast = safeData.last_name !== undefined ? safeData.last_name : currentLast;
     updateFields.name = [newFirst, newLast].filter(Boolean).join(' ').trim();
   }
 
   // Map phone_number -> phoneNumber
-  if (updateData.phone_number !== undefined) {
-    updateFields.phoneNumber = updateData.phone_number;
+  if (safeData.phone_number !== undefined) {
+    updateFields.phoneNumber = safeData.phone_number;
   }
 
-  if (updateData.country !== undefined) {
-    updateFields.country = updateData.country;
+  if (safeData.country !== undefined) {
+    updateFields.country = safeData.country;
   }
 
-  if (updateData.state !== undefined) {
-    updateFields.state = updateData.state;
+  if (safeData.state !== undefined) {
+    updateFields.state = safeData.state;
   }
 
-  if (updateData.countryCode !== undefined) {
-    updateFields.countryCode = updateData.countryCode;
+  if (safeData.countryCode !== undefined) {
+    updateFields.countryCode = safeData.countryCode;
   }
 
-  if (updateData.occupation !== undefined) {
-    updateFields.occupation = updateData.occupation;
+  if (safeData.occupation !== undefined) {
+    updateFields.occupation = safeData.occupation;
   }
 
-  if (updateData.address !== undefined) {
-    updateFields.address = updateData.address;
+  if (safeData.address !== undefined) {
+    updateFields.address = safeData.address;
   }
 
-  if (updateData.dateOfBirth !== undefined) {
-    if (updateData.dateOfBirth === null || updateData.dateOfBirth === '') {
+  if (safeData.dateOfBirth !== undefined) {
+    if (safeData.dateOfBirth === null || safeData.dateOfBirth === '') {
       updateFields.dateOfBirth = null;
     } else {
-      updateFields.dateOfBirth = new Date(updateData.dateOfBirth);
+      updateFields.dateOfBirth = new Date(safeData.dateOfBirth);
     }
   }
 

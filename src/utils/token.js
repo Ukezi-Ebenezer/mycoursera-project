@@ -16,6 +16,7 @@ const generateToken = (user) => {
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET, {
+    algorithm: 'HS256',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
 };
@@ -26,7 +27,7 @@ const generateToken = (user) => {
  * @returns {object} Decoded token payload
  */
 const verifyToken = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  return jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 };
 
 /**
