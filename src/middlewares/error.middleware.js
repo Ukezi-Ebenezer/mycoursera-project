@@ -21,11 +21,21 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
     return sendError(res, 413, 'Payload too large');
   }
 
+  // Handle Mongoose CastError without exposing internal paths or Mongoose error text
+  if (err.name === 'CastError') {
+    return sendError(res, 400, 'Invalid resource identifier');
+  }
+
+  // Handle Mongoose ValidationError without exposing internal schema details
+  if (err.name === 'ValidationError') {
+    return sendError(res, 400, 'Validation error');
+  }
+
   const statusCode = err.status || err.statusCode || 500;
 
-  // Never return stack traces or internal messages in production for 500 errors
+  // Never return stack traces, internal paths, or exception text for 500 errors
   let message = err.message || 'Internal Server Error';
-  if (isProduction && statusCode >= 500) {
+  if (statusCode >= 500) {
     message = 'Internal Server Error';
   }
 

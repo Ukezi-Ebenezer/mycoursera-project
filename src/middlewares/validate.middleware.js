@@ -64,8 +64,53 @@ const validateQuery = (schema) => {
   };
 };
 
+/**
+ * Reusable middleware to validate req.params using Joi
+ * Strips unknown fields, returns 400 on failure,
+ * and attaches cleaned values to req.validatedParams.
+ * Rejects injection characters ($ or .) and non-string/nested structures with 400.
+ *
+ * @param {object} schema - Joi schema object
+ */
+const validateParams = (schema) => {
+  return (req, res, next) => {
+    for (const [key, value] of Object.entries(req.params || {})) {
+      if (typeof key === 'string' && (key.startsWith('$') || key.includes('.'))) {
+        return sendError(res, 400, `Invalid parameter "${key}"`);
+      }
+      if (typeof value === 'string' && (value.includes('$') || value.includes('.'))) {
+        return sendError(res, 400, 'Invalid course id');
+      }
+      if (typeof value === 'object' && value !== null) {
+        return sendError(res, 400, 'Invalid course id');
+      }
+    }
+
+    if (!schema || typeof schema.validate !== 'function') {
+      return next();
+    }
+
+    const { error, value } = schema.validate(req.params, {
+      stripUnknown: true,
+      abortEarly: true,
+    });
+
+    if (error) {
+      const message =
+        error.details && error.details.length > 0
+          ? error.details[0].message
+          : 'Invalid course id';
+      return sendError(res, 400, message);
+    }
+
+    req.validatedParams = value;
+    next();
+  };
+};
+
 module.exports = {
   validate,
   validateQuery,
+  validateParams,
 };
 

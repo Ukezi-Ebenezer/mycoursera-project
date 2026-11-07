@@ -64,6 +64,20 @@ const getCoursesQuerySchema = Joi.object({
     }),
 }).options({ stripUnknown: true });
 
+const courseIdParamSchema = Joi.object({
+  id: Joi.string()
+    .hex()
+    .length(24)
+    .required()
+    .messages({
+      'string.base': 'Invalid course id',
+      'string.hex': 'Invalid course id',
+      'string.length': 'Invalid course id',
+      'any.required': 'Invalid course id',
+    }),
+}).options({ stripUnknown: true });
+
 module.exports = {
   getCoursesQuerySchema,
+  courseIdParamSchema,
 };

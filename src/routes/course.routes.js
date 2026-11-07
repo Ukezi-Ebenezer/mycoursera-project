@@ -3,8 +3,8 @@
 const { Router } = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/authorize.middleware');
-const { validateQuery } = require('../middlewares/validate.middleware');
-const { getCoursesQuerySchema } = require('../validators/course.validator');
+const { validateQuery, validateParams } = require('../middlewares/validate.middleware');
+const { getCoursesQuerySchema, courseIdParamSchema } = require('../validators/course.validator');
 const { getAllCourses, getCourse } = require('../controllers/course.controller');
 const { ROLES } = require('../constants/roles');
 const { sendSuccess } = require('../utils/response');
@@ -292,7 +292,7 @@ router.get('/', authenticate, validateQuery(getCoursesQuerySchema), getAllCourse
  *                   type: string
  *                   example: "Course not found"
  */
-router.get('/:id', authenticate, getCourse);
+router.get('/:id', authenticate, validateParams(courseIdParamSchema), getCourse);
 
 /**
  * @openapi
