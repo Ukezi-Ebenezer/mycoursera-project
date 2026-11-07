@@ -1,6 +1,6 @@
 'use strict';
 
-const { getCourses, getCourseById, updateCourse } = require('../services/course.service');
+const { getCourses, getCourseById, updateCourse, deleteCourse } = require('../services/course.service');
 const { sendSuccess, sendError } = require('../utils/response');
 
 /**
@@ -58,8 +58,26 @@ const updateCourseHandler = async (req, res, next) => {
   }
 };
 
+/**
+ * Controller to delete an existing course by ID
+ */
+const deleteCourseHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deleteCourse(id, req.user);
+
+    return sendSuccess(res, 200, 'Course deleted successfully', {});
+  } catch (error) {
+    if (error.statusCode) {
+      return sendError(res, error.statusCode, error.message);
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   getAllCourses,
   getCourse,
   updateCourse: updateCourseHandler,
+  deleteCourse: deleteCourseHandler,
 };

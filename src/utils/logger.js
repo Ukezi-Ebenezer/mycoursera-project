@@ -6,6 +6,10 @@
  */
 const logger = {
   info: (message, meta) => {
+    if (typeof message === 'object' && !meta) {
+      console.log('[INFO]', JSON.stringify(message));
+      return;
+    }
     if (meta) {
       console.log(`[INFO] ${message}`, JSON.stringify(meta));
     } else {
@@ -45,6 +49,24 @@ const logger = {
         : Object.keys(changedFields || {}),
     };
     console.log('[AUDIT] Course Updated:', JSON.stringify(payload));
+  },
+
+  /**
+   * Log course deletion safely
+   * @param {object} param0
+   * @param {string} [param0.event='course_deleted']
+   * @param {string|object} param0.userId
+   * @param {string|object} param0.courseId
+   * @param {string} param0.role
+   */
+  logCourseDelete: ({ event = 'course_deleted', userId, courseId, role }) => {
+    const payload = {
+      event,
+      userId: userId ? userId.toString() : null,
+      courseId: courseId ? courseId.toString() : null,
+      role: role || null,
+    };
+    console.log('[AUDIT] Course Deleted:', JSON.stringify(payload));
   },
 
   /**

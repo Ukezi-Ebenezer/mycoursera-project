@@ -6,7 +6,7 @@ const { authorize } = require('../middlewares/authorize.middleware');
 const { courseWriteLimiter } = require('../middlewares/rateLimit.middleware');
 const { validate, validateQuery, validateParams } = require('../middlewares/validate.middleware');
 const { getCoursesQuerySchema, courseIdParamSchema, updateCourseSchema } = require('../validators/course.validator');
-const { getAllCourses, getCourse, updateCourse } = require('../controllers/course.controller');
+const { getAllCourses, getCourse, updateCourse, deleteCourse } = require('../controllers/course.controller');
 const { ROLES } = require('../constants/roles');
 const { sendSuccess } = require('../utils/response');
 
@@ -459,6 +459,104 @@ router.put(
   validateParams(courseIdParamSchema),
   validate(updateCourseSchema),
   updateCourse
+);
+
+/**
+ * @openapi
+ * /api/courses/{id}:
+ *   delete:
+ *     summary: Delete a course by ID (Instructor and Admin only)
+ *     description: Permanently deletes a course by ID. Instructors can only delete their own courses. Admins can delete any course. Normal users receive 403 Forbidden.
+ *     tags:
+ *       - Courses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: 24-character hexadecimal MongoDB ObjectId of the course
+ *         example: "64f1a2b3c4d5e6f7a8b9c0d1"
+ *     responses:
+ *       200:
+ *         description: Course deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "Course deleted successfully"
+ *                 data:
+ *                   type: object
+ *                   example: {}
+ *       400:
+ *         description: Bad Request (Invalid course id)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 400
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid course id"
+ *       401:
+ *         description: Unauthorized (Missing or invalid token)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 401
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       403:
+ *         description: Forbidden (User account or non-owner instructor)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 403
+ *                 message:
+ *                   type: string
+ *                   example: "You can only delete your own courses"
+ *       404:
+ *         description: Not Found (Course not found)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 404
+ *                 message:
+ *                   type: string
+ *                   example: "Course not found"
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  courseWriteLimiter,
+  authorize(ROLES.INSTRUCTOR, ROLES.ADMIN),
+  validateParams(courseIdParamSchema),
+  deleteCourse
 );
 
 /**

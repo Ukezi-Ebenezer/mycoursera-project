@@ -225,8 +225,70 @@ const updateCourse = async (id, updateData, user) => {
   return toCourseResponse(updatedCourse);
 };
 
+/**
+ * Delete an existing course by its unique ID (Hard delete)
+ *
+ * @param {string} id - 24-character hexadecimal MongoDB ObjectId
+ * @param {object} user - Authenticated user from req.user
+ * @returns {Promise<void>}
+ */
+const deleteCourse = async (id, user) => {
+  // Validate :id as a valid ObjectId
+  if (
+    typeof id !== 'string' ||
+    !/^[0-9a-fA-F]{24}$/.test(id) ||
+    !mongoose.isValidObjectId(id)
+  ) {
+    const error = new Error('Invalid course id');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Fetch the course with findById
+  const existingCourse = await Course.findById(id);
+  if (!existingCourse) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Ownership: use canManageCourse(req.user, course) from src/utils/ownership.js
+  if (!canManageCourse(user, existingCourse)) {
+    const error = new Error('You can only delete your own courses');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // TODO: when enrollments exist, handle enrolled students here (block deletion or cascade)
+
+  // Build filter: include _id, and instructor: req.user._id when requester is an Instructor (no instructor filter for Admin)
+  const filter = { _id: id };
+  const userRole = user?.accountType || user?.role;
+  const isInstructor = userRole === ROLES.INSTRUCTOR || userRole === 'Instructor';
+  if (isInstructor) {
+    filter.instructor = user._id || user.id;
+  }
+
+  // Delete with findOneAndDelete
+  const deletedCourse = await Course.findOneAndDelete(filter);
+  if (!deletedCourse) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Log each successful delete with the logger from src/utils/logger.js as { event: "course_deleted", userId, courseId, role }. Don't log any other data.
+  logger.logCourseDelete({
+    event: 'course_deleted',
+    userId: (user?._id || user?.id)?.toString(),
+    courseId: id.toString(),
+    role: userRole,
+  });
+};
+
 module.exports = {
   getCourses,
   getCourseById,
   updateCourse,
+  deleteCourse,
 };
