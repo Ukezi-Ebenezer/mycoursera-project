@@ -49,6 +49,22 @@ app.use(
     skip: () => process.env.NODE_ENV === 'test',
   })
 );
+
+// Reject PUT and DELETE requests with non-JSON content type when a body is present
+app.use((req, res, next) => {
+  if (['PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const contentLength = req.headers['content-length'];
+    const hasBody =
+      (contentLength !== undefined && parseInt(contentLength, 10) > 0) ||
+      Boolean(req.headers['transfer-encoding']);
+
+    if (hasBody && !req.is('application/json')) {
+      return sendError(res, 415, 'Content-Type must be application/json');
+    }
+  }
+  next();
+});
+
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 

@@ -6,7 +6,7 @@ const { toCourseResponse } = require('../utils/course');
 const { canManageCourse } = require('../utils/ownership');
 const { ROLES } = require('../constants/roles');
 const { pick } = require('../utils/pick');
-const logger = require('../utils/logger');
+const { auditLog } = require('../utils/audit');
 
 /**
  * Escape regular expression special characters
@@ -216,10 +216,11 @@ const updateCourse = async (id, updateData, user) => {
   }
 
   // Audit log the update safely
-  logger.logCourseUpdate({
+  auditLog('course_updated', {
     userId: user?._id || user?.id,
-    courseId: updatedCourse._id,
-    changedFields: Object.keys(safeUpdateData),
+    targetId: updatedCourse._id,
+    role: userRole,
+    extra: { changedFields: Object.keys(safeUpdateData) },
   });
 
   return toCourseResponse(updatedCourse);
@@ -277,11 +278,10 @@ const deleteCourse = async (id, user) => {
     throw error;
   }
 
-  // Log each successful delete with the logger from src/utils/logger.js as { event: "course_deleted", userId, courseId, role }. Don't log any other data.
-  logger.logCourseDelete({
-    event: 'course_deleted',
+  // Audit log the deletion safely
+  auditLog('course_deleted', {
     userId: (user?._id || user?.id)?.toString(),
-    courseId: id.toString(),
+    targetId: id.toString(),
     role: userRole,
   });
 };

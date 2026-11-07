@@ -4,7 +4,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../src/models/User');
 const { ALL_ROLES } = require('../src/constants/roles');
-const logger = require('../src/utils/logger');
+const { auditLog } = require('../src/utils/audit');
 
 async function setRole() {
   const [emailArg, roleArg] = process.argv.slice(2);
@@ -51,10 +51,11 @@ async function setRole() {
     user.accountType = canonicalRole;
     await user.save();
 
-    logger.logRoleChange({
-      userId: user._id,
-      newRole: canonicalRole,
-      changedFields: ['accountType'],
+    auditLog('role_changed', {
+      userId: null,
+      targetId: user._id,
+      role: canonicalRole,
+      extra: { oldRole, newRole: canonicalRole, changedFields: ['accountType'] },
     });
 
     console.log(`✅ Successfully updated role for "${user.email}" to "${canonicalRole}".`);

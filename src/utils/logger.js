@@ -1,5 +1,7 @@
 'use strict';
 
+const { auditLog } = require('./audit');
+
 /**
  * Safe application logger.
  * Never prints Authorization headers, passwords, tokens, OTPs, or instructor codes.
@@ -34,55 +36,36 @@ const logger = {
   },
 
   /**
-   * Log course updates safely
-   * @param {object} param0
-   * @param {string|object} param0.userId
-   * @param {string|object} param0.courseId
-   * @param {Array<string>|object} param0.changedFields
+   * Log course updates safely (delegates to auditLog)
    */
   logCourseUpdate: ({ userId, courseId, changedFields }) => {
-    const payload = {
-      userId: userId ? userId.toString() : null,
-      courseId: courseId ? courseId.toString() : null,
-      changedFields: Array.isArray(changedFields)
-        ? changedFields
-        : Object.keys(changedFields || {}),
-    };
-    console.log('[AUDIT] Course Updated:', JSON.stringify(payload));
+    return auditLog('course_updated', {
+      userId,
+      targetId: courseId,
+      extra: { changedFields },
+    });
   },
 
   /**
-   * Log course deletion safely
-   * @param {object} param0
-   * @param {string} [param0.event='course_deleted']
-   * @param {string|object} param0.userId
-   * @param {string|object} param0.courseId
-   * @param {string} param0.role
+   * Log course deletion safely (delegates to auditLog)
    */
   logCourseDelete: ({ event = 'course_deleted', userId, courseId, role }) => {
-    const payload = {
-      event,
-      userId: userId ? userId.toString() : null,
-      courseId: courseId ? courseId.toString() : null,
-      role: role || null,
-    };
-    console.log('[AUDIT] Course Deleted:', JSON.stringify(payload));
+    return auditLog(event, {
+      userId,
+      targetId: courseId,
+      role,
+    });
   },
 
   /**
-   * Log role changes safely
-   * @param {object} param0
-   * @param {string|object} param0.userId
-   * @param {string} param0.courseId
-   * @param {Array<string>} param0.changedFields
+   * Log role changes safely (delegates to auditLog)
    */
   logRoleChange: ({ userId, courseId = null, changedFields = ['accountType'] }) => {
-    const payload = {
-      userId: userId ? userId.toString() : null,
-      courseId: courseId ? courseId.toString() : null,
-      changedFields: Array.isArray(changedFields) ? changedFields : [changedFields],
-    };
-    console.log('[AUDIT] Role Changed:', JSON.stringify(payload));
+    return auditLog('role_changed', {
+      userId,
+      targetId: courseId,
+      extra: { changedFields },
+    });
   },
 };
 

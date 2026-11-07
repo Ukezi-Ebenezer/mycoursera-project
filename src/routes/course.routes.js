@@ -9,6 +9,7 @@ const { getCoursesQuerySchema, courseIdParamSchema, updateCourseSchema } = requi
 const { getAllCourses, getCourse, updateCourse, deleteCourse } = require('../controllers/course.controller');
 const { ROLES } = require('../constants/roles');
 const { sendSuccess } = require('../utils/response');
+const { auditLog } = require('../utils/audit');
 
 const router = Router();
 
@@ -624,6 +625,12 @@ router.delete(
  *                   example: "Access denied: insufficient permissions"
  */
 router.post('/', authenticate, courseWriteLimiter, authorize(ROLES.INSTRUCTOR, ROLES.ADMIN), (req, res) => {
+  auditLog('course_created', {
+    userId: req.user._id,
+    targetId: null,
+    role: req.user.accountType,
+  });
+
   return sendSuccess(res, 201, 'Course created successfully', {
     course: req.body || {},
     createdBy: {
