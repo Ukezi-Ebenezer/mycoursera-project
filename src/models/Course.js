@@ -58,6 +58,7 @@ courseSchema.index({ category: 1 });
 courseSchema.index({ level: 1 });
 courseSchema.index({ availability: 1 });
 courseSchema.index({ title: 1 });
+courseSchema.index({ tags: 1 });
 
 const Course = mongoose.model('Course', courseSchema);
 
