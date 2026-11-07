@@ -77,7 +77,64 @@ const courseIdParamSchema = Joi.object({
     }),
 }).options({ stripUnknown: true });
 
+const updateCourseSchema = Joi.object({
+  title: Joi.string().trim().min(1).optional().messages({
+    'string.base': 'title must be a string',
+    'string.empty': 'title cannot be empty',
+  }),
+  description: Joi.string().trim().min(1).optional().messages({
+    'string.base': 'description must be a string',
+    'string.empty': 'description cannot be empty',
+  }),
+  price: Joi.number().min(0).optional().messages({
+    'number.base': 'price must be a number',
+    'number.min': 'price cannot be negative',
+  }),
+  tags: Joi.array()
+    .items(
+      Joi.string().trim().min(1).messages({
+        'string.base': 'tag must be a string',
+        'string.empty': 'tag cannot be empty',
+      })
+    )
+    .max(10)
+    .custom((value) => {
+      if (Array.isArray(value)) {
+        return [...new Set(value.map((t) => (typeof t === 'string' ? t.trim() : t)))];
+      }
+      return value;
+    })
+    .optional()
+    .messages({
+      'array.base': 'tags must be an array',
+      'array.max': 'tags cannot exceed 10 items',
+    }),
+  level: Joi.string().trim().min(1).optional().messages({
+    'string.base': 'level must be a string',
+    'string.empty': 'level cannot be empty',
+  }),
+  category: Joi.string().trim().min(1).optional().messages({
+    'string.base': 'category must be a string',
+    'string.empty': 'category cannot be empty',
+  }),
+  duration: Joi.string().trim().min(1).optional().messages({
+    'string.base': 'duration must be a string',
+    'string.empty': 'duration cannot be empty',
+  }),
+  availability: Joi.boolean().optional().messages({
+    'boolean.base': 'availability must be a boolean (true or false)',
+  }),
+})
+  .min(1)
+  .required()
+  .messages({
+    'object.min': 'No valid fields to update',
+    'any.required': 'No valid fields to update',
+  })
+  .options({ stripUnknown: true, convert: true, abortEarly: true });
+
 module.exports = {
   getCoursesQuerySchema,
   courseIdParamSchema,
+  updateCourseSchema,
 };

@@ -1,6 +1,6 @@
 'use strict';
 
-const { getCourses, getCourseById } = require('../services/course.service');
+const { getCourses, getCourseById, updateCourse } = require('../services/course.service');
 const { sendSuccess, sendError } = require('../utils/response');
 
 /**
@@ -40,7 +40,26 @@ const getCourse = async (req, res, next) => {
   }
 };
 
+/**
+ * Controller to update an existing course by ID
+ */
+const updateCourseHandler = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    const course = await updateCourse(id, updateData, req.user);
+
+    return sendSuccess(res, 200, 'Course edited successfully', course);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendError(res, error.statusCode, error.message);
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   getAllCourses,
   getCourse,
+  updateCourse: updateCourseHandler,
 };

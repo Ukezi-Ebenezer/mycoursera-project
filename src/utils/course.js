@@ -25,7 +25,7 @@ const toCourseResponse = (course) => {
     }
   }
 
-  return {
+  const response = {
     id,
     title: course.title,
     description: course.description,
@@ -34,10 +34,17 @@ const toCourseResponse = (course) => {
     category: course.category,
     level: course.level,
     availability: course.availability,
-    instructor: instructorId,
-    createdAt: course.createdAt,
-    updatedAt: course.updatedAt,
   };
+
+  if (course.duration !== undefined && course.duration !== null) {
+    response.duration = course.duration;
+  }
+
+  response.instructor = instructorId;
+  response.createdAt = course.createdAt;
+  response.updatedAt = course.updatedAt;
+
+  return response;
 };
 
 module.exports = {

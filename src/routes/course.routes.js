@@ -3,9 +3,9 @@
 const { Router } = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { authorize } = require('../middlewares/authorize.middleware');
-const { validateQuery, validateParams } = require('../middlewares/validate.middleware');
-const { getCoursesQuerySchema, courseIdParamSchema } = require('../validators/course.validator');
-const { getAllCourses, getCourse } = require('../controllers/course.controller');
+const { validate, validateQuery, validateParams } = require('../middlewares/validate.middleware');
+const { getCoursesQuerySchema, courseIdParamSchema, updateCourseSchema } = require('../validators/course.validator');
+const { getAllCourses, getCourse, updateCourse } = require('../controllers/course.controller');
 const { ROLES } = require('../constants/roles');
 const { sendSuccess } = require('../utils/response');
 
@@ -293,6 +293,171 @@ router.get('/', authenticate, validateQuery(getCoursesQuerySchema), getAllCourse
  *                   example: "Course not found"
  */
 router.get('/:id', authenticate, validateParams(courseIdParamSchema), getCourse);
+
+/**
+ * @openapi
+ * /api/courses/{id}:
+ *   put:
+ *     summary: Update a course by ID (Instructor only)
+ *     description: Update an existing course. Only the Instructor who created the course or an Admin can edit it. Normal Users receive 403 Forbidden. Instructors attempting to edit another instructor's course receive 403 Forbidden.
+ *     tags:
+ *       - Courses
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 24-character hexadecimal MongoDB ObjectId
+ *         example: "6aec5b0c848268f02461857c"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Advanced React Architecture
+ *               description:
+ *                 type: string
+ *                 example: Master design patterns, performance, and state management
+ *               price:
+ *                 type: number
+ *                 example: 95
+ *               tags:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["React", "JavaScript"]
+ *               level:
+ *                 type: string
+ *                 example: Advanced
+ *               category:
+ *                 type: string
+ *                 example: Development
+ *               duration:
+ *                 type: string
+ *                 example: "12 hours"
+ *               availability:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Course edited successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "Course edited successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "6aec5b0c848268f02461857c"
+ *                     title:
+ *                       type: string
+ *                       example: "Advanced React Architecture"
+ *                     price:
+ *                       type: number
+ *                       example: 95
+ *                     tags:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ["React", "JavaScript"]
+ *                     description:
+ *                       type: string
+ *                       example: "Master design patterns, performance, and state management"
+ *                     level:
+ *                       type: string
+ *                       example: "Advanced"
+ *                     category:
+ *                       type: string
+ *                       example: "Development"
+ *                     availability:
+ *                       type: boolean
+ *                       example: true
+ *                     instructor:
+ *                       type: string
+ *                       example: "6aec5b0c848268f02461857c"
+ *                     createdAt:
+ *                       type: string
+ *                       format: date-time
+ *                     updatedAt:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Bad Request (Invalid id, empty update, or invalid field values)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 400
+ *                 message:
+ *                   type: string
+ *                   example: "No valid fields to update"
+ *       401:
+ *         description: Unauthorized (Missing or invalid token)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 401
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       403:
+ *         description: Forbidden (User account or non-owner instructor)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 403
+ *                 message:
+ *                   type: string
+ *                   example: "You can only edit your own courses"
+ *       404:
+ *         description: Not Found (Course not found)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 404
+ *                 message:
+ *                   type: string
+ *                   example: "Course not found"
+ */
+router.put(
+  '/:id',
+  authenticate,
+  authorize(ROLES.INSTRUCTOR, ROLES.ADMIN),
+  validateParams(courseIdParamSchema),
+  validate(updateCourseSchema),
+  updateCourse
+);
 
 /**
  * @openapi

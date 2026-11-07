@@ -11,7 +11,7 @@ const validate = (schema) => {
     if (!schema || typeof schema.validate !== 'function') {
       return next();
     }
-    const { error, value } = schema.validate(req.body, {
+    const { error, value } = schema.validate(req.body || {}, {
       stripUnknown: true,
       abortEarly: true,
     });

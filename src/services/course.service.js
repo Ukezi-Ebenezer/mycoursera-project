@@ -3,6 +3,8 @@
 const mongoose = require('mongoose');
 const Course = require('../models/Course');
 const { toCourseResponse } = require('../utils/course');
+const { canManageCourse } = require('../utils/ownership');
+const { ROLES } = require('../constants/roles');
 
 /**
  * Escape regular expression special characters
@@ -142,7 +144,67 @@ const getCourseById = async (id, user) => {
   return toCourseResponse(course);
 };
 
+/**
+ * Update an existing course by its unique ID
+ *
+ * @param {string} id - 24-character hexadecimal MongoDB ObjectId
+ * @param {object} updateData - Cleaned update fields from validated body
+ * @param {object} user - Authenticated user from req.user
+ * @returns {Promise<object>} Formatted updated course object
+ */
+const updateCourse = async (id, updateData, user) => {
+  // Validate :id as a valid ObjectId
+  if (
+    typeof id !== 'string' ||
+    !/^[0-9a-fA-F]{24}$/.test(id) ||
+    !mongoose.isValidObjectId(id)
+  ) {
+    const error = new Error('Invalid course id');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Fetch the course with findById
+  const existingCourse = await Course.findById(id);
+  if (!existingCourse) {
+    const error = new Error('Course not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Ownership check
+  if (!canManageCourse(user, existingCourse)) {
+    const error = new Error('You can only edit your own courses');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // Build filter: include _id, and instructor: req.user._id for Instructor
+  const filter = { _id: id };
+  const userRole = user?.accountType || user?.role;
+  const isInstructor = userRole === ROLES.INSTRUCTOR || userRole === 'Instructor';
+  if (isInstructor) {
+    filter.instructor = user._id || user.id;
+  }
+
+  // Update with findOneAndUpdate
+  const updatedCourse = await Course.findOneAndUpdate(
+    filter,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedCourse) {
+    const error = new Error('You can only edit your own courses');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return toCourseResponse(updatedCourse);
+};
+
 module.exports = {
   getCourses,
   getCourseById,
+  updateCourse,
 };

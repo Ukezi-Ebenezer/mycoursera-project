@@ -33,6 +33,10 @@ const courseSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    duration: {
+      type: String,
+      trim: true,
+    },
     availability: {
       type: Boolean,
       default: true,
