@@ -149,6 +149,101 @@ const enrollInCourse = async ({ courseId, amount, user }) => {
   return enrollment;
 };
 
+/**
+ * Complete a course for the authenticated user.
+ *
+ * @param {object} params
+ * @param {string} params.courseId - ID of course to mark
+ * @param {boolean} params.isCompleted - Whether course is completed
+ * @param {object} params.user - Authenticated user from req.user
+ * @returns {Promise<{ enrollment: object, course: object }>}
+ */
+const completeCourse = async ({ courseId, isCompleted, user }) => {
+  // Validate :id as a valid ObjectId
+  if (
+    typeof courseId !== 'string' ||
+    !/^[0-9a-fA-F]{24}$/.test(courseId) ||
+    !mongoose.isValidObjectId(courseId)
+  ) {
+    const error = new Error('Invalid course id');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // The user is ALWAYS taken from req.user. Never read a user id from the body, query or URL.
+  const userId = (user._id || user.id)?.toString();
+
+  // Find the enrollment with { user: req.user._id, course: :id }
+  const enrollment = await Enrollment.findOne({
+    user: userId,
+    course: courseId,
+  });
+
+  if (!enrollment) {
+    const error = new Error('You are not enrolled in this course');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // a. If the enrollment status is "dropped", return 409 "You have dropped this course"
+  if (enrollment.status === 'dropped') {
+    const error = new Error('You have dropped this course');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  // e. If isCompleted is false and the status is "completed": return 400 "A completed course cannot be marked as incomplete"
+  if (isCompleted === false && enrollment.status === 'completed') {
+    const error = new Error('A completed course cannot be marked as incomplete');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let finalEnrollment = enrollment;
+
+  // b. If isCompleted is true and the status is "active": update atomically
+  if (isCompleted === true && enrollment.status === 'active') {
+    // TODO: the certificates task must require proof of completion (for example passing grades) before issuing a certificate. Marking a course complete must not by itself earn a certificate.
+    const updated = await Enrollment.findOneAndUpdate(
+      { _id: enrollment._id, user: userId, status: 'active' },
+      {
+        $set: {
+          status: 'completed',
+          progress: 100,
+          completedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (updated) {
+      finalEnrollment = updated;
+
+      // Log a successful change to completed with auditLog (event "course_completed", userId, targetId = course id). Don't log the request body.
+      auditLog('course_completed', {
+        userId,
+        targetId: courseId.toString(),
+        role: user.accountType || user.role,
+      });
+    } else {
+      // If the update matches nothing (a parallel request got there first), reload the enrollment and return current state with 200
+      finalEnrollment = await Enrollment.findById(enrollment._id);
+    }
+  }
+
+  // c. If isCompleted is true and the status is already "completed": return 200 with the current state and do NOT change completedAt.
+  // d. If isCompleted is false and the status is "active": change nothing and return 200 with the current state.
+
+  // Load the course with .lean() and select only title and description
+  const course = await Course.findById(courseId).select('title description').lean();
+
+  return {
+    enrollment: finalEnrollment,
+    course,
+  };
+};
+
 module.exports = {
   enrollInCourse,
+  completeCourse,
 };

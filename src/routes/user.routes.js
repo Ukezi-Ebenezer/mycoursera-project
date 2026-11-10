@@ -2,7 +2,11 @@
 
 const { Router } = require('express');
 const { getCurrentUser, updateUser } = require('../controllers/user.controller');
+const { completeCourse } = require('../controllers/enrollment.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
+const { completeLimiter } = require('../middlewares/rateLimit.middleware');
+const { validateParams } = require('../middlewares/validate.middleware');
+const { courseIdParamSchema } = require('../validators/course.validator');
 
 const router = Router();
 
@@ -89,6 +93,154 @@ const router = Router();
  *                   example: Authentication required
  */
 router.get('/current', authenticate, (req, res, next) => getCurrentUser(req, res, next));
+
+/**
+ * @openapi
+ * /api/users/courses/{id}:
+ *   put:
+ *     summary: Complete a course
+ *     description: Mark an enrolled course as completed or update completion status.
+ *     tags:
+ *       - Users
+ *       - Enrollments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: 24-character hexadecimal MongoDB ObjectId of the course
+ *         example: "64f1a2b3c4d5e6f7a8b9c0d1"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isCompleted
+ *             properties:
+ *               isCompleted:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Course successfully marked
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "Course successfully marked"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: "64f1a2b3c4d5e6f7a8b9c0d2"
+ *                     courseId:
+ *                       type: string
+ *                       example: "64f1a2b3c4d5e6f7a8b9c0d1"
+ *                     title:
+ *                       type: string
+ *                       example: "Full Stack Web Development"
+ *                     description:
+ *                       type: string
+ *                       example: "Learn full stack development from scratch"
+ *                     isCompleted:
+ *                       type: boolean
+ *                       example: true
+ *                     progress:
+ *                       type: integer
+ *                       example: 100
+ *                     status:
+ *                       type: string
+ *                       example: "completed"
+ *                     completedAt:
+ *                       type: string
+ *                       format: date-time
+ *                       example: "2026-11-10T14:00:00.000Z"
+ *       400:
+ *         description: Bad request (invalid course id, invalid body, or marking completed course as incomplete)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 400
+ *                 message:
+ *                   type: string
+ *                   example: "Invalid course id"
+ *       401:
+ *         description: Unauthorized (missing, invalid, or revoked token)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 401
+ *                 message:
+ *                   type: string
+ *                   example: "Authentication required"
+ *       404:
+ *         description: Not found (not enrolled in the course)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 404
+ *                 message:
+ *                   type: string
+ *                   example: "You are not enrolled in this course"
+ *       409:
+ *         description: Conflict (course has been dropped)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 409
+ *                 message:
+ *                   type: string
+ *                   example: "You have dropped this course"
+ *       429:
+ *         description: Too many requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 429
+ *                 message:
+ *                   type: string
+ *                   example: "Too many attempts, please try again later"
+ */
+router.put(
+  '/courses/:id',
+  authenticate,
+  completeLimiter,
+  validateParams(courseIdParamSchema),
+  completeCourse
+);
 
 /**
  * @openapi

@@ -22,6 +22,17 @@ const enrollCourseBodySchema = Joi.object({
     }),
 }).options({ stripUnknown: true, convert: true, abortEarly: true });
 
+const completeCourseBodySchema = Joi.object({
+  isCompleted: Joi.boolean()
+    .strict()
+    .required()
+    .messages({
+      'any.required': 'isCompleted is required',
+      'boolean.base': 'isCompleted must be a boolean',
+    }),
+}).options({ stripUnknown: true, abortEarly: true });
+
 module.exports = {
   enrollCourseBodySchema,
+  completeCourseBodySchema,
 };

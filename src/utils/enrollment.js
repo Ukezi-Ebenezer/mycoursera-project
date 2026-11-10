@@ -47,7 +47,36 @@ const toEnrollmentResponse = (enrollment) => {
   };
 };
 
+/**
+ * Transform an enrollment document and course document into a sanitized completion response.
+ * Never includes _id, __v, paymentReference, or another user's data.
+ *
+ * @param {object} enrollment - Raw enrollment document or plain object
+ * @param {object} course - Lean course object with title and description
+ * @returns {object} Formatted completion response
+ */
+const toCompletionResponse = (enrollment, course) => {
+  if (!enrollment) {
+    return null;
+  }
+
+  const rawId = enrollment._id || enrollment.id;
+  const rawCourseId = enrollment.course?._id || enrollment.course?.id || enrollment.course;
+
+  return {
+    id: rawId ? rawId.toString() : null,
+    courseId: rawCourseId ? rawCourseId.toString() : null,
+    title: course?.title || '',
+    description: course?.description || '',
+    isCompleted: enrollment.status === 'completed',
+    progress: enrollment.progress !== undefined ? enrollment.progress : 0,
+    status: enrollment.status,
+    completedAt: enrollment.completedAt || null,
+  };
+};
+
 module.exports = {
   formatAmount,
   toEnrollmentResponse,
+  toCompletionResponse,
 };

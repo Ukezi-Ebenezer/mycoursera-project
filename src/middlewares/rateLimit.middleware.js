@@ -19,6 +19,9 @@ const courseWriteRateLimitWindowMinutes = parseInt(process.env.COURSE_WRITE_RATE
 const enrollRateLimitMax = parseInt(process.env.ENROLL_RATE_LIMIT_MAX, 10) || 20;
 const enrollRateLimitWindowMinutes = parseInt(process.env.ENROLL_RATE_LIMIT_WINDOW_MINUTES, 10) || 15;
 
+const completeRateLimitMax = parseInt(process.env.COMPLETE_RATE_LIMIT_MAX, 10) || 30;
+const completeRateLimitWindowMinutes = parseInt(process.env.COMPLETE_RATE_LIMIT_WINDOW_MINUTES, 10) || 15;
+
 const generalRateLimitMax = parseInt(process.env.GENERAL_RATE_LIMIT_MAX, 10) || 200;
 const generalRateLimitWindowMinutes = parseInt(process.env.GENERAL_RATE_LIMIT_WINDOW_MINUTES, 10) || 15;
 
@@ -92,6 +95,22 @@ const enrollLimiter = rateLimit({
   },
 });
 
+const completeLimiter = rateLimit({
+  windowMs: completeRateLimitWindowMinutes * 60 * 1000,
+  max: completeRateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const userId = req.user
+      ? (req.user._id || req.user.id)?.toString()
+      : ipKeyGenerator(req.ip || '127.0.0.1');
+    return `complete_${userId}`;
+  },
+  handler: (req, res) => {
+    return sendError(res, 429, 'Too many attempts, please try again later');
+  },
+});
+
 const generalLimiter = rateLimit({
   windowMs: generalRateLimitWindowMinutes * 60 * 1000,
   max: generalRateLimitMax,
@@ -108,5 +127,6 @@ module.exports = {
   passwordLimiter,
   courseWriteLimiter,
   enrollLimiter,
+  completeLimiter,
   generalLimiter,
 };
