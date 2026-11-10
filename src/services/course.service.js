@@ -2,6 +2,7 @@
 
 const mongoose = require('mongoose');
 const Course = require('../models/Course');
+const Enrollment = require('../models/Enrollment');
 const { toCourseResponse } = require('../utils/course');
 const { canManageCourse } = require('../utils/ownership');
 const { ROLES } = require('../constants/roles');
@@ -260,7 +261,17 @@ const deleteCourse = async (id, user) => {
     throw error;
   }
 
-  // TODO: when enrollments exist, handle enrolled students here (block deletion or cascade)
+  // Check for active or completed enrollments
+  const hasEnrolledStudents = await Enrollment.exists({
+    course: id,
+    status: { $in: ['active', 'completed'] },
+  });
+
+  if (hasEnrolledStudents) {
+    const error = new Error('Cannot delete a course that has enrolled students');
+    error.statusCode = 409;
+    throw error;
+  }
 
   // Build filter: include _id, and instructor: req.user._id when requester is an Instructor (no instructor filter for Admin)
   const filter = { _id: id };
@@ -277,6 +288,9 @@ const deleteCourse = async (id, user) => {
     error.statusCode = 404;
     throw error;
   }
+
+  // Delete any dropped enrollments associated with this course
+  await Enrollment.deleteMany({ course: id, status: 'dropped' });
 
   // Audit log the deletion safely
   auditLog('course_deleted', {

@@ -550,6 +550,19 @@ router.put(
  *                 message:
  *                   type: string
  *                   example: "Course not found"
+ *       409:
+ *         description: Conflict (Cannot delete a course that has enrolled students)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 409
+ *                 message:
+ *                   type: string
+ *                   example: "Cannot delete a course that has enrolled students"
  */
 router.delete(
   '/:id',
