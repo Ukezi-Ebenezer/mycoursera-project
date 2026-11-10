@@ -16,6 +16,9 @@ const passwordRateLimitWindowMinutes = parseInt(process.env.PASSWORD_RATE_LIMIT_
 const courseWriteRateLimitMax = parseInt(process.env.COURSE_WRITE_RATE_LIMIT_MAX, 10) || 60;
 const courseWriteRateLimitWindowMinutes = parseInt(process.env.COURSE_WRITE_RATE_LIMIT_WINDOW_MINUTES, 10) || 15;
 
+const enrollRateLimitMax = parseInt(process.env.ENROLL_RATE_LIMIT_MAX, 10) || 20;
+const enrollRateLimitWindowMinutes = parseInt(process.env.ENROLL_RATE_LIMIT_WINDOW_MINUTES, 10) || 15;
+
 const generalRateLimitMax = parseInt(process.env.GENERAL_RATE_LIMIT_MAX, 10) || 200;
 const generalRateLimitWindowMinutes = parseInt(process.env.GENERAL_RATE_LIMIT_WINDOW_MINUTES, 10) || 15;
 
@@ -73,6 +76,22 @@ const courseWriteLimiter = rateLimit({
   },
 });
 
+const enrollLimiter = rateLimit({
+  windowMs: enrollRateLimitWindowMinutes * 60 * 1000,
+  max: enrollRateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const userId = req.user
+      ? (req.user._id || req.user.id)?.toString()
+      : ipKeyGenerator(req.ip || '127.0.0.1');
+    return `enroll_${userId}`;
+  },
+  handler: (req, res) => {
+    return sendError(res, 429, 'Too many attempts, please try again later');
+  },
+});
+
 const generalLimiter = rateLimit({
   windowMs: generalRateLimitWindowMinutes * 60 * 1000,
   max: generalRateLimitMax,
@@ -88,5 +107,6 @@ module.exports = {
   loginLimiter,
   passwordLimiter,
   courseWriteLimiter,
+  enrollLimiter,
   generalLimiter,
 };

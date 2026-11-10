@@ -20,15 +20,14 @@ const chargeForCourse = async ({ userId, courseId, amount, currency = 'USD' }) =
     return { success: true, reference: null };
   }
 
-  // Read PAYMENT_MODE from env: "mock" (default in development) or "disabled"
+  // Read PAYMENT_MODE from env: "mock" (default in development/non-production) or "disabled"
+  const isProduction = process.env.NODE_ENV === 'production';
   const paymentMode = (
     process.env.PAYMENT_MODE ||
-    (process.env.NODE_ENV === 'development' ? 'mock' : 'disabled')
+    (!isProduction ? 'mock' : 'disabled')
   )
     .trim()
     .toLowerCase();
-
-  const isProduction = process.env.NODE_ENV === 'production';
 
   // If PAYMENT_MODE is "mock" and NODE_ENV is NOT "production", generate a mock reference
   if (paymentMode === 'mock' && !isProduction) {
