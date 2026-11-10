@@ -10,6 +10,7 @@ const FORBIDDEN_KEYS = [
   'cookie',
   'body',
   'reqbody',
+  'reference',
 ];
 
 /**

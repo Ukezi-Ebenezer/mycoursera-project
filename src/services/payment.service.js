@@ -38,7 +38,19 @@ const chargeForCourse = async ({ userId, courseId, amount, currency = 'USD' }) =
     };
   }
 
-  // In every other case (mock in production, disabled, unknown value), reject with 503
+  if (isProduction && paymentMode === 'mock') {
+    const error = new Error('Payment service unavailable in production');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  if (paymentMode === 'disabled') {
+    const error = new Error('Payment service unavailable');
+    error.statusCode = 503;
+    throw error;
+  }
+
+  // In every other case (unknown value), reject with 503
   const error = new Error('Payment gateway not configured');
   error.statusCode = 503;
   throw error;
